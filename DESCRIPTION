@@ -10,7 +10,14 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
     dplR,
+    dplyr,
+    ggplot2,
     graphics,
     grDevices,
+    RColorBrewer,
+    readr,
+    scales,
     stats,
-    utils
+    tidyr,
+    utils,
+    zoo
