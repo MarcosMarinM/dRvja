@@ -21,3 +21,5 @@ Imports:
     tidyr,
     utils,
     zoo
+URL: https://github.com/MarcosMarinM/dRvja
+BugReports: https://github.com/MarcosMarinM/dRvja/issues
