@@ -16,7 +16,7 @@
 #' @return Invisibly returns `NULL`. Throws an error if writing fails.
 #' @export
 #' @importFrom utils write.table
-#' @importFrom stats na.omit # Used for basic NA removal before writing
+#' @importFrom stats na.omit
 #'
 #' @examples
 #' if (requireNamespace("dplR", quietly = TRUE)) {

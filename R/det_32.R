@@ -19,9 +19,9 @@
 #' @return A data.frame where each column is a detrended series (Ring Width Index - RWI),
 #'   and row names correspond to the years.
 #' @export
-#' @importFrom dplR detrend.series read.rwl # Added read.rwl here for example usage
-#' @importFrom stats sd # Example if you use sd, etc. Add other base package imports if needed
-#' @importFrom utils installed.packages # Example
+#' @importFrom dplR detrend.series read.rwl
+#' @importFrom stats sd
+#' @importFrom utils installed.packages
 #'
 #' @examples
 #' if (requireNamespace("dplR", quietly = TRUE)) {
