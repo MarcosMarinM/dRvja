@@ -2,72 +2,73 @@
 % Please edit documentation in R/read_climate_data.R
 \name{read_climate_data}
 \alias{read_climate_data}
-\title{Read and Process Climate Data File (Monthly or Daily)}
+\title{Read and Process Climate Data File (Detecting Variable Type)}
 \usage{
 read_climate_data(
   file_path,
-  daily_date_format = "\%Y\%m\%d",
+  var_type = "auto",
+  file_format = "auto",
+  date_format = NULL,
   daily_col_names = c("date", "value"),
-  na_strings = c("NA", "", " ", "-999", "-9999")
+  value_col_name = "value",
+  na_strings = c("NA", "N/A", "", "-999", "-9999", "-999.9"),
+  skip = 0,
+  verbose = TRUE
 )
 }
 \arguments{
-\item{file_path}{Character string. The full path to the climate data file (.txt).}
+\item{file_path}{Path to the climate data file.}
 
-\item{daily_date_format}{Character string. The format of the date column if the
-input is daily data. Defaults to "\%Y\%m\%d".}
+\item{var_type}{Specify variable type: 'auto' (default), 'P', 'T'.}
 
-\item{daily_col_names}{Character vector of length 2. Expected column names
-for daily data if no header is detected or standard names ('date', 'value')
-are not found. Defaults to \code{c("date", "value")}. The second element will be
-treated as the climate variable.}
+\item{file_format}{Force format: 'auto'(default), 'monthly_wide', 'daily_ymd_v', 'daily_date_v'.}
 
-\item{na_strings}{Character vector. Strings to be interpreted as NA values
-when reading the file. Defaults to \code{c("NA", "", " ", "-999", "-9999")}.}
+\item{date_format}{For 'daily_date_v', specify date format string.}
+
+\item{daily_col_names}{Col names for 2-col daily if no header. Default: \code{c("date", "value")}.}
+
+\item{value_col_name}{Name for value column in daily/monthly_long. Default: "value".}
+
+\item{na_strings}{Strings for NA. Default: \code{c("NA", "N/A", "", "-999", "-9999", "-999.9")}. (Removed " ")}
+
+\item{skip}{Lines to skip. Default: 0.}
+
+\item{verbose}{Print messages? Default: TRUE.}
 }
 \value{
-A data frame with columns 'year' and '1' through '12' containing
-the monthly climate values, or NULL if the file cannot be processed.
-Issues warnings for detected problems.
+A data frame with standardized columns and attributes "frequency" and "variable_type", or NULL.
 }
 \description{
-Reads a climate data file (e.g., precipitation) and standardizes it
-into a monthly format with columns 'year' and '1' through '12'.
-Handles both 13-column (year + 12 months) and 2-column (daily: date, value)
-formats, commonly found in climate datasets. Assumes tab-separated values.
+Reads climate data, attempts auto-detection of format (daily/monthly) and
+variable type (Precipitation/Temperature) based on columns, headers, and filename.
+Standardizes column names and types while preserving the original temporal frequency.
+Returns a data frame with attributes "frequency" ('daily'/'monthly') and
+"variable_type" ('P'/'T'/'unknown'/'ambiguous').
+}
+\details{
+Standardized Output Columns & Frequency:
+\itemize{
+\item Monthly Wide (13 col): \code{year}(int), \code{1}..\code{12}(num). Freq="monthly".
+\item Daily YMDV (4 col): \code{year}(int), \code{month}(int), \code{day}(int), \code{value}(num). Freq="daily".
+\item Daily Date-Value (2 col): \code{date}(Date), \code{value}(num). Freq="daily".
+\item Monthly YM-Value (2 col): \code{year}(int), \code{month}(int), \code{value}(num). Freq="monthly".
+}
+Use \code{attr(result, "frequency")} and \code{attr(result, "variable_type")}.
 }
 \examples{
-# --- Example with a temporary monthly file ---
-monthly_data <- data.frame(
-  year = 1990:1992,
-  Jan = runif(3, 0, 50), Feb = runif(3, 0, 50), Mar = runif(3, 0, 50),
-  Apr = runif(3, 0, 50), May = runif(3, 0, 50), Jun = runif(3, 0, 50),
-  Jul = runif(3, 0, 50), Aug = runif(3, 0, 50), Sep = runif(3, 0, 50),
-  Oct = runif(3, 0, 50), Nov = runif(3, 0, 50), Dec = runif(3, 0, 50)
-)
-# Fix column names to be 1-12 for the function
-colnames(monthly_data) <- c("year", 1:12)
-temp_monthly_file <- tempfile(fileext = ".txt")
-write.table(monthly_data, temp_monthly_file, sep = "\t", row.names = FALSE, quote = FALSE)
-processed_monthly <- read_climate_data(temp_monthly_file)
-print("Processed Monthly:")
-print(head(processed_monthly))
-unlink(temp_monthly_file)
-
-# --- Example with a temporary daily file ---
-start_date <- as.Date("1990-01-01")
-end_date <- as.Date("1990-03-31")
-daily_dates <- seq(start_date, end_date, by = "day")
-daily_data <- data.frame(
-  date = format(daily_dates, "\%Y\%m\%d"),
-  precipitation = runif(length(daily_dates), 0, 5)
-)
-temp_daily_file <- tempfile(fileext = ".txt")
-# Write *with* header for this example
-write.table(daily_data, temp_daily_file, sep = "\t", row.names = FALSE, quote = FALSE, col.names = TRUE)
-processed_daily <- read_climate_data(temp_daily_file)
-print("Processed Daily:")
-print(head(processed_daily))
-unlink(temp_daily_file)
+# (Examples remain the same as before)
+# --- Setup ---
+make_temp_file <- function(data, fname = tempfile(fileext = ".txt"), ...) {
+  write.table(data, fname, sep = "\t", row.names = FALSE, quote=FALSE, ...); return(fname)
+}
+# --- Test Files ---
+mw_data <- data.frame(year=1990); for(m in 1:12) mw_data[[as.character(m)]]<-1; f1 <- make_temp_file(mw_data)
+r1 <- read_climate_data(f1); print(str(r1)); print(attributes(r1)); unlink(f1)
+dy_data <- data.frame(Y=1990,M=1,D=1:2,V=c(1,2)); f2 <- make_temp_file(dy_data)
+r2 <- read_climate_data(f2); print(str(r2)); print(attributes(r2)); unlink(f2)
+dd_data <- data.frame(Date="19900101", Val=3); f3 <- make_temp_file(dd_data, col.names=FALSE)
+r3 <- read_climate_data(f3); print(str(r3)); print(attributes(r3)); unlink(f3)
+my_data <- data.frame(YM="199001", Tavg=4); f4 <- make_temp_file(my_data, "monthly_Tavg.txt")
+r4 <- read_climate_data(f4); print(str(r4)); print(attributes(r4)); unlink(f4)
 
 }
