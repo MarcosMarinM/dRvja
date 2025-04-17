@@ -9,16 +9,19 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
+    data.table,
     dplR,
     dplyr,
     ggplot2,
     graphics,
     grDevices,
+    lubridate,
     RColorBrewer,
     readr,
     scales,
     stats,
     tidyr,
+    tools,
     utils,
     zoo
 URL: https://github.com/MarcosMarinM/dRvja
