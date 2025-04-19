@@ -2,34 +2,36 @@
 % Please edit documentation in R/clim_corr_m.R
 \name{clim_corr_m}
 \alias{clim_corr_m}
-\title{Calculate Monthly Climate Correlation with Moving Window (Handles Frequency)}
+\title{Calculate Monthly Climate Correlation Heatmap Data & Save Significant Results}
 \usage{
 clim_corr_m(
   growth_data,
   climate_data,
   growth_var = "res",
   climate_var_name = "climate",
-  window_width = 12,
+  window_widths = 1:24,
   start_year = NULL,
   end_year = NULL,
   cor_method = "pearson",
   daily_agg_fun = "auto",
-  value_col = "value"
+  value_col = "value",
+  sig = 0.05,
+  save_significant = TRUE,
+  output_filename = NULL
 )
 }
 \arguments{
 \item{growth_data}{A data frame with tree growth data ('year', \code{growth_var}).}
 
-\item{climate_data}{A data frame with climate data, typically the output of
-\code{read_climate_data}. Can be daily (must contain 'date'/'value' or
-'year'/'month'/'day'/'value') or monthly ('year', '1'..'12'). The function
-checks the "frequency" attribute or column names to determine the type.}
+\item{climate_data}{A data frame with climate data (output of \code{read_climate_data}).}
 
 \item{growth_var}{Character string. Growth index column name (default: "res").}
 
-\item{climate_var_name}{Character string. Base name for climate variable (default: "climate").}
+\item{climate_var_name}{Character string. Base name for climate variable (default: "climate").
+Used for internal messages and default output filename.}
 
-\item{window_width}{Integer. Moving window width in months (default: 12).}
+\item{window_widths}{Integer vector. Sequence of moving window widths in months
+to test (e.g., \code{3:24}). Default: \code{3:24}.}
 
 \item{start_year}{Optional integer. First year for analysis.}
 
@@ -37,48 +39,69 @@ checks the "frequency" attribute or column names to determine the type.}
 
 \item{cor_method}{Character string. Correlation method (default: "pearson").}
 
-\item{daily_agg_fun}{Function or Character string. The function used to aggregate daily
-data to monthly. Default is "sum" (appropriate for precipitation). Can be "mean"
-(for temperature) or a custom function. Function checks \code{variable_type} attribute
-from \code{climate_data} to guess if not specified ("sum" for "P", "mean" for "T").}
+\item{daily_agg_fun}{Function or Character string. Function for daily aggregation
+('auto', 'sum', 'mean', or custom function).}
 
-\item{value_col}{Character string. Name of the value column in \code{climate_data} if
-it's daily (used internally if daily). Default is "value".}
+\item{value_col}{Character string. Name of value column if \code{climate_data} is daily. Default: "value".}
+
+\item{sig}{Numeric. Threshold for p-value significance (default: 0.05).}
+
+\item{save_significant}{Logical. Should the tidy data frame of significant
+results be saved to a text file? (Default: TRUE).}
+
+\item{output_filename}{Character string or NULL. Path and filename for the saved
+significant results (.txt). If NULL (default), a name like
+"significant_correlations_\link{climate_var_name}.txt" is generated in the
+working directory.}
 }
 \value{
-A tidy data frame summarizing the monthly correlation results (columns:
-end_month, month_abbr, correlation, p_value, n_overlap, climate_var),
-or NULL if calculations fail.
+A list containing:
+\itemize{
+\item \code{correlations}: Wide data frame (rows=window_width, cols=month_abbr) of correlations.
+\item \code{p_values}: Wide data frame of p-values.
+\item \code{n_overlap}: Wide data frame of overlap counts (N).
+\item \code{significant_tidy}: Tidy data frame containing only rows where
+p_value < \code{sig}. Columns include window_width, end_month,
+month_abbr, correlation, p_value, n_overlap.
+}
+Returns NULL if calculations fail for all windows. As a side effect, may save a .txt file.
 }
 \description{
 Calculates the correlation between a tree-growth variable and a climate
-variable aggregated over a moving window (monthly analysis). Handles both daily
-and monthly input climate data (output from \code{read_climate_data}). Daily data is
-automatically aggregated to monthly sums before calculating the rolling window.
+variable over a range of moving window widths. Returns results formatted
+for heatmap analysis (wide matrices) and optionally saves a tidy data frame
+of statistically significant correlations (p < sig) to a file.
 }
 \examples{
 # --- Generate Sample Data ---
 growth <- data.frame(year = 1950:2000, res = rnorm(51))
-# Monthly Climate Data
 climate_m <- data.frame(year = 1949:2001); for(m in 1:12) climate_m[[as.character(m)]]<-runif(53,10,60)
 attr(climate_m, "frequency") <- "monthly"; attr(climate_m, "variable_type") <- "P"
-# Daily Climate Data (Temp)
-dates_d <- seq(as.Date("1949-01-01"), as.Date("2001-12-31"), by = "day")
-climate_d_t <- data.frame(date = dates_d, value = rnorm(length(dates_d), 15, 5))
-attr(climate_d_t, "frequency") <- "daily"; attr(climate_d_t, "variable_type") <- "T"
 
-# --- Run clim_corr_m with MONTHLY input ---
-results_m <- clim_corr_m(growth, climate_m, climate_var_name = "prec_m")
-print("Results from Monthly Input:")
-print(results_m)
+# --- Run clim_corr_m (default saving) ---
+temp_dir <- tempdir() # Use temporary directory for example file
+default_fname <- file.path(temp_dir, "significant_correlations_prec_m.txt")
+results_list <- clim_corr_m(growth, climate_m,
+                            window_widths = 6:18,
+                            climate_var_name = "prec_m",
+                            sig = 0.10, # Use different significance for example
+                            output_filename = default_fname) # Save to temp dir
 
-# --- Run clim_corr_m with DAILY TEMP input (should use mean) ---
-results_d_t <- clim_corr_m(growth, climate_d_t, climate_var_name = "temp_d")
-print("Results from Daily Temp Input (aggregated with mean):")
-print(results_d_t)
+# --- Inspect results ---
+if (!is.null(results_list)) {
+  print("Significant Tidy Results (p < 0.10):")
+  print(results_list$significant_tidy)
+  if(file.exists(default_fname)) {
+     print(paste("Significant results saved to:", default_fname))
+     # print(readLines(default_fname, n=5)) # View file content
+     unlink(default_fname) # Clean up temp file
+  } else {
+     print("No significant results found to save (p < 0.10).")
+  }
 
-# --- Run clim_corr_m forcing SUM aggregation on Temp data ---
-# results_d_t_sum <- clim_corr_m(growth, climate_d_t, daily_agg_fun = "sum")
-# print(results_d_t_sum) # Compare correlations
+  # Example: Run without saving
+  # results_nosave <- clim_corr_m(growth, climate_m, save_significant = FALSE)
+  # print(results_nosave$significant_tidy) # Still available in the list
+}
 
 }

@@ -10,12 +10,16 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
     data.table,
+    doParallel,
     dplR,
     dplyr,
+    foreach,
     ggplot2,
     graphics,
     grDevices,
     lubridate,
+    parallel,
+    progressr,
     RColorBrewer,
     readr,
     scales,
